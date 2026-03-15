@@ -220,35 +220,73 @@
 
 <script>
 
+  // ─── MIC CALIBRATION ──────────────────────────────────────────────────────
   const MIC_WINDOW_MS      = 5000;
-  const QUIET_THRESHOLD    = 4; 
-  const ACTIVE_THRESHOLD   = 15; 
+  const QUIET_THRESHOLD    = 4;
+  const ACTIVE_THRESHOLD   = 15;
 
-  const micHistory = []; 
+  const micHistory = [];
 
   function pushMicSample(raw) {
-    // raw is the binary value from /data (0 or 1)
     const now = Date.now();
     micHistory.push({ value: parseInt(raw), timestamp: now });
-
-    // evict samples older than the window
     const cutoff = now - MIC_WINDOW_MS;
-    while (micHistory.length > 0 && micHistory[0].timestamp < cutoff) {
-      micHistory.shift();
-    }
+    while (micHistory.length > 0 && micHistory[0].timestamp < cutoff) micHistory.shift();
   }
 
   function getMicVolume() {
-    // count 1s in the current window
     const count = micHistory.reduce((sum, s) => sum + s.value, 0);
-    const maxPossible = MIC_WINDOW_MS / 300; // max samples in window at 300ms poll rate
-
-    // clamp count between thresholds, then normalise to 0.0–1.0
+    const maxPossible = MIC_WINDOW_MS / 300;
     const clamped = Math.min(Math.max(count - QUIET_THRESHOLD, 0), ACTIVE_THRESHOLD - QUIET_THRESHOLD);
     const normalised = parseFloat((clamped / (ACTIVE_THRESHOLD - QUIET_THRESHOLD)).toFixed(2));
-
     console.log(`mic count in window: ${count} / ~${Math.round(maxPossible)} samples → volume: ${normalised}`);
     return { count, normalised };
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // ─── ACCELEROMETER MOVING AVERAGE ─────────────────────────────────────────
+  //
+  // Each axis keeps a 5-second sliding window of absolute values.
+  // On every poll the raw reading is pushed in, old samples are evicted,
+  // and the mean of what remains is returned.
+  //
+  // ACCEL_WINDOW_MS — width of the window in ms. Tune independently from
+  //                   the mic window if you want different response speeds.
+  //
+  // HOW TO CALIBRATE:
+  //   1. Open console (F12). Watch "accel averages" log while machine is idle
+  //      — note the resting values (gravity on Z will read ~9.8).
+  //   2. Run a wash cycle and note the averages — adjust classifyLaundry()
+  //      delta thresholds to match what you observe.
+
+  const ACCEL_WINDOW_MS = 5000;  // sliding window duration (ms) — CALIBRATE if needed
+
+  const accelHistory = { x: [], y: [], z: [] };
+
+  function pushAccelSample(ax, ay, az) {
+    const now = Date.now();
+    const cutoff = now - ACCEL_WINDOW_MS;
+    accelHistory.x.push({ value: Math.abs(Math.abs(ax) - 122), timestamp: now });
+    accelHistory.y.push({ value: Math.abs(Math.abs(ay) - 4123), timestamp: now });
+    accelHistory.z.push({ value: Math.abs(Math.abs(az) - 40), timestamp: now });
+    for (const axis of ['x', 'y', 'z']) {
+      while (accelHistory[axis].length > 0 && accelHistory[axis][0].timestamp < cutoff) {
+        accelHistory[axis].shift();
+      }
+    }
+  }
+
+  function getAccelAverages() {
+    const avg = axis => {
+      const h = accelHistory[axis];
+      if (h.length === 0) return 0;
+      return h.reduce((sum, s) => sum + s.value, 0) / h.length;
+    };
+    const ax = parseFloat(avg('x').toFixed(2));
+    const ay = parseFloat(avg('y').toFixed(2));
+    const az = parseFloat(avg('z').toFixed(2));
+    console.log(`accel averages — X: ${ax}, Y: ${ay}, Z: ${az}`);
+    return { ax, ay, az };
   }
   // ──────────────────────────────────────────────────────────────────────────
 
@@ -270,11 +308,10 @@ function addNotif(icon, iconBg, iconColor, msg) {
 function accelMag(ax, ay, az) { return Math.sqrt(ax*ax + ay*ay + az*az); }
 
 function classifyLaundry(ax, ay, az) {
-  const delta = Math.abs(accelMag(ax, ay, az) - 9.8);
-  if(delta < 0.3)  return {state:"still",    label:"laundry is still",    sub:"machine not running or cycle done"};
-  if(delta < 1.5)  return {state:"gentle",   label:"gentle spin",         sub:"early wash cycle"};
-  if(delta < 4.0)  return {state:"spinning", label:"machine running",     sub:"mid-cycle, all good"};
-  return                  {state:"intense",  label:"heavy spin detected", sub:"final spin — almost done!"};
+  const delta = Math.abs(accelMag(ax, ay, az));
+  if(delta < 320)  return {state:"still",    label:"laundry is still",    sub:"machine not running or cycle done"};
+  if(delta < 450)  return {state:"spinning", label:"machine running",     sub:"mid-cycle, all good"};
+  return                  {state:"intense",  label:"door opened — run!", sub:"your clothes are being thrown out..."};
 }
 
 function moldRisk(temp, hum) {
@@ -285,7 +322,6 @@ function moldRisk(temp, hum) {
 }
 
 function availStatus(volume, stat) {
-  
   if (stat === 1) {
     return {
       label: "you spin me right round",
@@ -294,8 +330,7 @@ function availStatus(volume, stat) {
       barColor: "#3C3489"
     };
   }
-
-  if(volume > 0.8) return {label:"busy — try later", pct:85, badge:"badge-red", barColor:"#E24B4A"};
+  if(volume > 0.8) return {label:"busy — try later",  pct:85, badge:"badge-red",   barColor:"#E24B4A"};
   if(volume > 0.4) return {label:"moderate activity", pct:50, badge:"badge-amber", barColor:"#EF9F27"};
   return {
     label: "open — go for it!",
@@ -326,12 +361,13 @@ async function updateData() {
     const data = await fetch("/data").then(r => r.json());
     const temp = parseFloat(data.temp);
     const hum  = parseFloat(data.hum);
-    const ax   = parseFloat(data.ax);
-    const ay   = parseFloat(data.ay);
-    const az   = parseFloat(data.az);
     const stat = parseInt(data.stat);
 
-    // push the raw binary mic value into the sliding window
+    // push raw accel samples into sliding windows, then get smoothed averages
+    pushAccelSample(parseFloat(data.ax), parseFloat(data.ay), parseFloat(data.az));
+    const { ax, ay, az } = getAccelAverages();
+
+    // push mic sample
     pushMicSample(data.mic);
     const { normalised: micVolume } = getMicVolume();
 
@@ -350,13 +386,14 @@ async function updateData() {
         <div class="bzz-sub">machine is working</div>`;
       setBadge("mic-badge", "badge-purple", "on machine");
 
-      const toBar = v => Math.min(100, Math.max(0, ((v + 15) / 30) * 100));
+      // bars: averaged absolute values mapped to 0–100% (cap at 20 m/s²)
+      const toBar = v => Math.min(100, Math.max(0, (v / 1000) * 100));
       document.getElementById("ax-bar").style.width = toBar(ax) + "%";
       document.getElementById("ay-bar").style.width = toBar(ay) + "%";
       document.getElementById("az-bar").style.width = toBar(az) + "%";
-      setEl("ax-val", ax.toFixed(1));
-      setEl("ay-val", ay.toFixed(1));
-      setEl("az-val", az.toFixed(1));
+      setEl("ax-val", ax.toFixed(2));
+      setEl("ay-val", ay.toFixed(2));
+      setEl("az-val", az.toFixed(2));
 
       const laundry = classifyLaundry(ax, ay, az);
       setEl("laundry-status", laundry.label);
@@ -366,7 +403,7 @@ async function updateData() {
         if(laundry.state === "still" && prevLaundryState === "spinning")
           addNotif("!", "#EAF3DE", "#27500A", "your laundry might be done — go check!");
         else if(laundry.state === "intense")
-          addNotif("~", "#EEEDFE", "#534AB7", "heavy vibration detected — final spin?");
+          addNotif("!!!", "#fcc5c5", "#ff4545", "the laundry rascal is digging — GO GO GO!");
         else if(laundry.state === "still" && prevLaundryState !== null)
           addNotif("?", "#FAEEDA", "#633806", "machine stopped — door opened or cycle done");
         prevLaundryState = laundry.state;
@@ -405,12 +442,12 @@ async function updateData() {
     document.getElementById("avail-bar").style.width      = avail.pct + "%";
     document.getElementById("avail-bar").style.background = avail.barColor;
     setBadge(
-        "avail-badge",
-        avail.badge,
-        avail.pct < 30 ? "open" :
-        avail.pct < 70 ? "busy" :
-        avail.pct < 90 ? "occupied" :
-        "baby, right round"
+      "avail-badge",
+      avail.badge,
+      avail.pct < 30 ? "open" :
+      avail.pct < 70 ? "busy" :
+      avail.pct < 90 ? "occupied" :
+      "baby, right round"
     );
 
     const ts = tempStatus(temp);
