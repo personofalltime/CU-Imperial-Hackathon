@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>laundry room 3B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font: 'Space Grotesk', sans-serif;
+      --bg: #f8f8f6;
+      --surface: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --border-strong: rgba(0,0,0,0.18);
+      --text-primary: #1a1a18;
+      --text-secondary: #6b6b67;
+      --text-tertiary: #a0a09b;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --radius-xl: 20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 28px 20px 48px;
+    }
+    .dash { max-width: 560px; margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .topbar h1 { font-size: 24px; font-weight: 500; letter-spacing: -0.3px; }
+    .live-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #1D9E75;
+      margin-right: 7px;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+      animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+    .subtitle { font-size: 13px; color: var(--text-tertiary); margin-top: 3px; }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
+    }
+    .badge-green  { background: #EAF3DE; color: #27500A; }
+    .badge-amber  { background: #FAEEDA; color: #633806; }
+    .badge-red    { background: #FCEBEB; color: #791F1F; }
+    .badge-purple { background: #EEEDFE; color: #3C3489; }
+    .badge-blue   { background: #E6F1FB; color: #0C447C; }
+
+    .section-divider {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin: 24px 0 10px;
+    }
+
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+    .card-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 8px;
+    }
+    .card-value { font-size: 28px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 2px; }
+    .card-sub { font-size: 12px; color: var(--text-secondary); }
+
+    .avail-bar {
+      height: 6px;
+      background: #f0f0ec;
+      border-radius: 3px;
+      margin: 10px 0 6px;
+      overflow: hidden;
+    }
+    .avail-fill { height: 100%; border-radius: 3px; transition: width .7s ease; }
+
+    .mold-risk { display: flex; align-items: center; gap: 12px; padding: 10px 0 4px; }
+    .mold-score-wrap { flex: 1; }
+    .mold-track { height: 5px; background: #f0f0ec; border-radius: 3px; overflow: hidden; }
+    .mold-fill { height: 100%; border-radius: 3px; transition: width .7s ease; }
+
+    .accel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .accel-axis { font-size: 11px; font-weight: 500; width: 14px; color: var(--text-tertiary); }
+    .accel-bar-bg { flex: 1; height: 5px; background: #f0f0ec; border-radius: 3px; overflow: hidden; }
+    .accel-bar-fill { height: 100%; border-radius: 3px; transition: width .3s ease; }
+    .accel-val { font-size: 11px; color: var(--text-secondary); min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    .notif-feed { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+    .notif {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8f8f6;
+      border-radius: var(--radius-md);
+    }
+    .notif-icon {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+    .notif-text { font-size: 13px; color: var(--text-primary); line-height: 1.4; }
+    .notif-time { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  </style>
+</head>
+<body>
+<div class="dash">
+  <div class="topbar">
+    <div>
+      <h1><span class="live-dot"></span>laundry room G12</h1>
+      <div class="subtitle">last updated <span id="last-update">just now</span></div>
+    </div>
+    <div id="overall-badge" class="badge badge-green">all good</div>
+  </div>
+
+  <div class="section-divider">availability</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-label">room status</div>
+      <div class="card-value" id="avail-status" style="font-size:18px;line-height:1.3">checking...</div>
+      <div class="avail-bar"><div class="avail-fill" id="avail-bar" style="width:0%;background:#1D9E75"></div></div>
+      <div id="avail-badge" class="badge badge-green">open</div>
+    </div>
+    <div class="card">
+      <div class="card-label">mic activity</div>
+      <div class="card-value" id="mic-val">--</div>
+      <div class="card-sub" id="mic-sub">ambient sound level</div>
+      <div id="mic-badge" class="badge badge-blue" style="margin-top:8px">quiet</div>
+    </div>
+  </div>
+
+  <div class="section-divider">environment</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-label">temperature</div>
+      <div class="card-value" id="temp-val">--</div>
+      <div class="card-sub" id="temp-sub">room temp</div>
+      <div id="temp-badge" class="badge badge-green" style="margin-top:8px">normal</div>
+    </div>
+    <div class="card">
+      <div class="card-label">humidity</div>
+      <div class="card-value" id="hum-val">--</div>
+      <div class="mold-risk">
+        <div class="mold-score-wrap">
+          <div style="font-size:10px;color:var(--text-tertiary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em">mold risk</div>
+          <div class="mold-track"><div class="mold-fill" id="mold-fill" style="width:0%;background:#639922"></div></div>
+        </div>
+        <div id="mold-score" style="font-size:13px;font-weight:500;min-width:30px;text-align:right">0%</div>
+      </div>
+      <div id="hum-badge" class="badge badge-green">fresh</div>
+    </div>
+  </div>
+
+  <div class="section-divider">your laundry</div>
+  <div class="card" style="margin-bottom:10px">
+    <div class="card-label">motion feed</div>
+    <div class="grid3" style="margin:12px 0 6px;align-items:start">
+      <div>
+        <div class="accel-row"><span class="accel-axis">X</span><div class="accel-bar-bg"><div class="accel-bar-fill" id="ax-bar" style="width:50%;background:#7F77DD"></div></div><span class="accel-val" id="ax-val">0</span></div>
+        <div class="accel-row"><span class="accel-axis">Y</span><div class="accel-bar-bg"><div class="accel-bar-fill" id="ay-bar" style="width:50%;background:#7F77DD"></div></div><span class="accel-val" id="ay-val">0</span></div>
+        <div class="accel-row"><span class="accel-axis">Z</span><div class="accel-bar-bg"><div class="accel-bar-fill" id="az-bar" style="width:50%;background:#7F77DD"></div></div><span class="accel-val" id="az-val">0</span></div>
+      </div>
+      <div style="grid-column:span 2;padding-left:4px">
+        <div class="card-label" style="margin-bottom:6px">what's happening</div>
+        <div class="card-value" id="laundry-status" style="font-size:17px;line-height:1.35">waiting for data...</div>
+        <div class="card-sub" id="laundry-sub" style="margin-top:5px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">notifications</div>
+    <div class="notif-feed" id="notif-feed">
+      <div class="notif">
+        <div class="notif-icon" style="background:#EEEDFE;color:#534AB7">i</div>
+        <div><div class="notif-text">waiting for sensor data...</div><div class="notif-time">now</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const notifs = [];
+let prevLaundryState = null;
+
+function addNotif(icon, iconBg, iconColor, msg) {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  notifs.unshift({icon, iconBg, iconColor, msg, timeStr});
+  if(notifs.length > 4) notifs.pop();
+  document.getElementById("notif-feed").innerHTML = notifs.map(n => `
+    <div class="notif">
+      <div class="notif-icon" style="background:${n.iconBg};color:${n.iconColor}">${n.icon}</div>
+      <div><div class="notif-text">${n.msg}</div><div class="notif-time">${n.timeStr}</div></div>
+    </div>`).join("");
+}
+
+function accelMag(ax, ay, az) { return Math.sqrt(ax*ax + ay*ay + az*az); }
+
+function classifyLaundry(ax, ay, az) {
+  const delta = Math.abs(accelMag(ax, ay, az) - 9.8);
+  if(delta < 0.3)  return {state:"still",    label:"laundry is still",      sub:"machine not running or cycle done"};
+  if(delta < 1.5)  return {state:"gentle",   label:"gentle spin",           sub:"early wash cycle"};
+  if(delta < 4.0)  return {state:"spinning", label:"machine running",       sub:"mid-cycle, all good"};
+  return               {state:"intense",  label:"heavy spin detected",   sub:"final spin — almost done!"};
+}
+
+function moldRisk(temp, hum) {
+  if(hum >= 80 && temp >= 20) return {score:90, label:"high mold risk — go now!", badge:"badge-red",   fill:"#E24B4A"};
+  if(hum >= 65 && temp >= 18) return {score:55, label:"damp — worth rushing",     badge:"badge-amber", fill:"#EF9F27"};
+  if(hum >= 50)               return {score:25, label:"a little humid",           badge:"badge-amber", fill:"#EF9F27"};
+  return                             {score:8,  label:"fresh air vibes",          badge:"badge-green", fill:"#639922"};
+}
+
+function availStatus(temp) {
+  if(temp > 35) return {label:"machines running — occupied", pct:85, badge:"badge-red",   barColor:"#E24B4A"};
+  if(temp > 28) return {label:"warming up / finishing",      pct:50, badge:"badge-amber", barColor:"#EF9F27"};
+  return               {label:"open — go for it!",           pct:15, badge:"badge-green", barColor:"#1D9E75"};
+}
+
+function micStatus(mic) {
+  if(mic > 700) return {label:"loud — machines running", badge:"badge-red"};
+  if(mic > 400) return {label:"active hum",              badge:"badge-amber"};
+  return               {label:"quiet",                   badge:"badge-blue"};
+}
+
+function tempStatus(temp) {
+  if(temp > 35) return {label:"hot in here", badge:"badge-red"};
+  if(temp > 28) return {label:"warm",        badge:"badge-amber"};
+  if(temp < 14) return {label:"cold",        badge:"badge-blue"};
+  return               {label:"normal",      badge:"badge-green"};
+}
+
+function setEl(id, text) { const e = document.getElementById(id); if(e) e.textContent = text; }
+function setBadge(id, cls, text) { const e = document.getElementById(id); if(!e) return; e.className = "badge " + cls; e.textContent = text; }
+
+async function updateData() {
+  try {
+    const data = await fetch("/data").then(r => r.json());
+    const temp = parseFloat(data.temp);
+    const hum  = parseFloat(data.hum);
+    const mic  = parseFloat(data.mic);
+    const ax   = parseFloat(data.ax);
+    const ay   = parseFloat(data.ay);
+    const az   = parseFloat(data.az);
+
+    setEl("temp-val", temp.toFixed(1) + " °C");
+    setEl("hum-val",  hum.toFixed(0)  + " %");
+    setEl("mic-val",  Math.round(mic).toString());
+    setEl("ax-val",   ax.toFixed(1));
+    setEl("ay-val",   ay.toFixed(1));
+    setEl("az-val",   az.toFixed(1));
+    setEl("last-update", "just now");
+
+    const toBar = v => Math.min(100, Math.max(0, ((v + 15) / 30) * 100));
+    document.getElementById("ax-bar").style.width = toBar(ax) + "%";
+    document.getElementById("ay-bar").style.width = toBar(ay) + "%";
+    document.getElementById("az-bar").style.width = toBar(az) + "%";
+
+    const mold = moldRisk(temp, hum);
+    document.getElementById("mold-fill").style.width      = mold.score + "%";
+    document.getElementById("mold-fill").style.background = mold.fill;
+    setEl("mold-score", mold.score + "%");
+    setBadge("hum-badge", mold.badge, mold.label);
+
+    const avail = availStatus(temp);
+    setEl("avail-status", avail.label);
+    document.getElementById("avail-bar").style.width      = avail.pct + "%";
+    document.getElementById("avail-bar").style.background = avail.barColor;
+    setBadge("avail-badge", avail.badge, avail.pct < 30 ? "open" : avail.pct < 70 ? "busy" : "occupied");
+
+    const ms = micStatus(mic);
+    setBadge("mic-badge", ms.badge, ms.label);
+
+    const ts = tempStatus(temp);
+    setBadge("temp-badge", ts.badge, ts.label);
+
+    const laundry = classifyLaundry(ax, ay, az);
+    setEl("laundry-status", laundry.label);
+    setEl("laundry-sub",    laundry.sub);
+
+    if(laundry.state !== prevLaundryState) {
+      if(laundry.state === "still" && prevLaundryState === "spinning")
+        addNotif("!", "#EAF3DE", "#27500A", "your laundry might be done — go check!");
+      else if(laundry.state === "intense")
+        addNotif("~", "#EEEDFE", "#534AB7", "heavy vibration detected — final spin?");
+      else if(laundry.state === "still" && prevLaundryState !== null)
+        addNotif("?", "#FAEEDA", "#633806", "machine stopped — door opened or cycle done");
+      prevLaundryState = laundry.state;
+    }
+
+    if(mold.score >= 90)
+      addNotif("!", "#FCEBEB", "#791F1F", "high humidity + heat — rush to collect your laundry!");
+
+    const allGood = mold.score < 50 && avail.pct < 50;
+    setBadge("overall-badge",
+      allGood ? "badge-green" : mold.score >= 90 ? "badge-red" : "badge-amber",
+      allGood ? "all good"    : mold.score >= 90 ? "act now"   : "heads up");
+
+  } catch(err) {
+    setEl("last-update", "connection error");
+    console.error(err);
+  }
+}
+
+updateData();
+setInterval(updateData, 300);
+</script>
+</body>
+</html>
