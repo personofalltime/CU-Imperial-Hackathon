@@ -1,0 +1,26 @@
+INSTRUCTIONS
+
+To run this Project:
+
+Install Arduino IDE. 
+Plug the circuit into USB.
+Configure the PORT (COM8) from Device Manager.
+Install additional libraries (Library Manager -> Search):
+	DHT sensor library
+
+Upload code onto circuit.
+If no errors, proceed.
+
+Install Python dependencies (Terminal):
+	pip install pyserial flask
+
+Make sure that Arduino IDE Serial Monitor is closed.
+Run app.py
+If Terminal outputs valid data, proceed.
+
+Open http://127.0.0.1:5000/
+
+Play around with sound, temperature, humidity, acceleration data.
+Press the button to switch States.
+
+Have fun with your new Laundry Monitor!

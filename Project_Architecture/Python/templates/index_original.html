@@ -1,4 +1,4 @@
-<!-- THIS IS THE HTML CODE THAT IS PUSHED ONTO A WEBSITE -->
+<!-- THIS IS THE HTML CODE THAT IS GOOD -->
 
 <!DOCTYPE html>
 <html lang="en">
@@ -290,7 +290,7 @@ function availStatus(volume, stat) {
     return {
       label: "you spin me right round",
       pct: 100,
-      badge: "badge-purple",
+      badge: "baby, right round",
       barColor: "#3C3489"
     };
   }
@@ -404,14 +404,7 @@ async function updateData() {
     setEl("avail-status", avail.label);
     document.getElementById("avail-bar").style.width      = avail.pct + "%";
     document.getElementById("avail-bar").style.background = avail.barColor;
-    setBadge(
-        "avail-badge",
-        avail.badge,
-        avail.pct < 30 ? "open" :
-        avail.pct < 70 ? "busy" :
-        avail.pct < 90 ? "occupied" :
-        "baby, right round"
-    );
+    setBadge("avail-badge", avail.badge, avail.pct < 30 ? avail.openBadge : avail.pct < 70 ? "busy" : "occupied");
 
     const ts = tempStatus(temp);
     setBadge("temp-badge", ts.badge, ts.label);
