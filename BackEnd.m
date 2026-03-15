@@ -1,15 +1,14 @@
-clc, clearvals;
+clc, clear classes;
 
 a = arduino('COM4', 'Nano3', 'Libraries', 'I2C');
 
 % I2C Config
 
-address = scanI2CBus(a);
 
-accelerometer = device(a, 'I2CAddress', 0x48);
+accelerometer = device(a, 'I2CAddress', 0x1C);
 
-accelerometer.SCLPin = 'A5';
-accelerometer.SDAPin = 'A4';
+s = serialport('COM4', 115200);
+
 
 % Configure pinout for arduino LEDs
 
@@ -21,7 +20,11 @@ configurePin(a, 'D11', 'pullup');
 
 configurePin(a, 'D4', 'digitalInput');
 
+disp("configured");
+
 while true
+
+
 
     writeRegister(accelerometer, 0X0E, 0x0, 'uint8'); % set to active mode
     writeRegister(accelerometer, 0x2A, 0x19, 'uint8'); % set to +/- 2g mode, most precise
@@ -30,9 +33,9 @@ while true
     
     output = read(accelerometer, 6, 'uint8');
     
-    outputX = output(1)*256 + output(2);
-    outputY = output(3)*256 + output(4);
-    outputZ = output(5)*256 + output(6);
+    outputX = uint16(bitshift(uint16(output(1)), 8)) + uint16(output(2));
+    outputY = uint16(bitshift(uint16(output(3)), 8)) + uint16(output(4));
+    outputZ = uint16(bitshift(uint16(output(5)), 8)) + uint16(output(6));
     
     %processX
     
@@ -42,13 +45,12 @@ while true
         sign = 1;
     end
     
-    integerVal = bitshift((outputX & 0x4000), -14);
-    
-    accelerationX = ((outputX&0x3F)/(0.4096))/1000;
+    integerVal = bitshift((bitand(outputX, 0x4000)), -14);
+   
+    accelerationX = bitand(outputX, 0x3FFF)/(0.4096);
     accelerationX = accelerationX* sign;
     accelerationX = accelerationX + integerVal;
     
-    accelerationX;
     
     % Process Y Acceleration
     
@@ -58,13 +60,11 @@ while true
         sign = 1;
     end
     
-    integerVal = bitshift((outputY & 0x4000), -14);
+    integerVal = bitshift(bitand(outputY, typecast(0x4000, 'uint16')), -14);
     
-    accelerationY = ((outputY&0x3F)/(0.4096))/1000;
+    accelerationY = (typecast(bitand(outputY,typecast(0x3FFF, 'uint16')), 'uint16')/(0.4096));
     accelerationY = accelerationY* sign;
     accelerationY = accelerationY + integerVal;
-    
-    accelerationY;
     
     % Process Z acceleration
     
@@ -74,23 +74,26 @@ while true
         sign = 1;
     end
     
-    integerVal = bitshift((outputZ & 0x4000), -14);
+    integerVal = bitshift(bitand(outputZ, typecast(0x4000, 'uint16')), -14);
     
-    accelerationZ = ((outputZ&0x3F)/(0.4096))/1000;
+    accelerationZ = (typecast(bitand(outputZ, typecast(0x3FFF, 'uint16')), 'uint16')/(0.4096));
     accelerationZ = accelerationZ* sign;
-    accelerationZ = accelerationZ + integerVal;
+    accelerationZ = typecast(accelerationZ + integerVal, 'uint16');
     
-    accelerationZ;
+    out.ax = accelerationX;
+    out.ay = accelerationY;
+    out.az = accelerationZ;
 
-    noise = readDigitalPin(a, 'D4');
+    out.humidity = digitalRead(a, 'D4');
 
-    count = count + 1;
+    out.temp = 0;
+    out.humidity = 0;
+    out.mic = 0;
 
-    if(count =
+    writeline(s, val);
+    
 
     %main body of code to process sensor values
-
-
 
 end
 
