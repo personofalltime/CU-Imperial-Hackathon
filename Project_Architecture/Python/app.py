@@ -4,6 +4,11 @@ import time
 import threading
 from flask import Flask, jsonify, render_template
 
+##
+import csv
+from datetime import datetime
+##
+
 app = Flask(__name__)
 
 latest_data = {
@@ -12,7 +17,8 @@ latest_data = {
     "mic": 0,
     "ax": 0,
     "ay": 0,
-    "az": 0
+    "az": 0,
+    "stat": 0
 }
 
 def read_serial():
@@ -44,12 +50,60 @@ def read_serial():
                 "ax": data.get("ax", 0),
                 "ay": data.get("ay", 0),
                 "az": data.get("az", 0),
+                "stat": data.get("stat", 0)
             }
 
             print("UPDATED:", latest_data)
 
         except Exception as e:
             print("Serial error:", e)
+
+'''
+##
+def record_csv(duration=60, interval=0.02):
+    """
+    Records sensor data for a given duration (seconds)
+    interval = time between samples
+    """
+
+    filename = f"vibration_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    print(f"Recording {duration}s of data to {filename}")
+
+    start_time = time.time()
+
+    with open(filename, "w", newline="") as f:
+        writer = csv.writer(f)
+
+        # CSV header
+        writer.writerow([
+            "timestamp",
+            "temp",
+            "hum",
+            "mic",
+            "ax",
+            "ay",
+            "az"
+        ])
+
+        while time.time() - start_time < duration:
+            row = [
+                time.time(),
+                latest_data["temp"],
+                latest_data["hum"],
+                latest_data["mic"],
+                latest_data["ax"],
+                latest_data["ay"],
+                latest_data["az"]
+            ]
+
+            writer.writerow(row)
+
+            time.sleep(interval)
+
+    print("Recording complete.")
+##
+'''
 
 @app.route("/")
 def index():
@@ -63,4 +117,10 @@ def data():
 if __name__ == "__main__":
     t = threading.Thread(target=read_serial, daemon=True)
     t.start()
+
+    ##
+    ##time.sleep(5)
+    ##record_csv(duration=60)
+    ##
+
     app.run(debug=True, use_reloader=False)

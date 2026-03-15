@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>laundry room 3B</title>
+  <title>laundry room G12</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
@@ -30,7 +30,6 @@
       padding: 28px 20px 48px;
     }
     .dash { max-width: 560px; margin: 0 auto; }
-
     .topbar {
       display: flex;
       align-items: flex-start;
@@ -53,7 +52,6 @@
     }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
     .subtitle { font-size: 13px; color: var(--text-tertiary); margin-top: 3px; }
-
     .badge {
       display: inline-block;
       font-size: 11px;
@@ -67,7 +65,8 @@
     .badge-red    { background: #FCEBEB; color: #791F1F; }
     .badge-purple { background: #EEEDFE; color: #3C3489; }
     .badge-blue   { background: #E6F1FB; color: #0C447C; }
-
+    .badge-gray   { background: #F1EFE8; color: #444441; }
+    .topbar-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     .section-divider {
       font-size: 10px;
       font-weight: 500;
@@ -76,10 +75,8 @@
       letter-spacing: .1em;
       margin: 24px 0 10px;
     }
-
     .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
     .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-
     .card {
       background: var(--surface);
       border: 0.5px solid var(--border);
@@ -96,7 +93,6 @@
     }
     .card-value { font-size: 28px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 2px; }
     .card-sub { font-size: 12px; color: var(--text-secondary); }
-
     .avail-bar {
       height: 6px;
       background: #f0f0ec;
@@ -105,18 +101,15 @@
       overflow: hidden;
     }
     .avail-fill { height: 100%; border-radius: 3px; transition: width .7s ease; }
-
     .mold-risk { display: flex; align-items: center; gap: 12px; padding: 10px 0 4px; }
     .mold-score-wrap { flex: 1; }
     .mold-track { height: 5px; background: #f0f0ec; border-radius: 3px; overflow: hidden; }
     .mold-fill { height: 100%; border-radius: 3px; transition: width .7s ease; }
-
     .accel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
     .accel-axis { font-size: 11px; font-weight: 500; width: 14px; color: var(--text-tertiary); }
     .accel-bar-bg { flex: 1; height: 5px; background: #f0f0ec; border-radius: 3px; overflow: hidden; }
     .accel-bar-fill { height: 100%; border-radius: 3px; transition: width .3s ease; }
     .accel-val { font-size: 11px; color: var(--text-secondary); min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
-
     .notif-feed { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
     .notif {
       display: flex;
@@ -138,6 +131,8 @@
     }
     .notif-text { font-size: 13px; color: var(--text-primary); line-height: 1.4; }
     .notif-time { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+    .bzz { font-size: 22px; font-weight: 500; letter-spacing: 1px; color: #7F77DD; }
+    .bzz-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -147,7 +142,10 @@
       <h1><span class="live-dot"></span>laundry room G12</h1>
       <div class="subtitle">last updated <span id="last-update">just now</span></div>
     </div>
-    <div id="overall-badge" class="badge badge-green">all good</div>
+    <div class="topbar-badges">
+      <div id="state-badge" class="badge badge-gray">sensor observing</div>
+      <div id="overall-badge" class="badge badge-green">all good</div>
+    </div>
   </div>
 
   <div class="section-divider">availability</div>
@@ -160,8 +158,10 @@
     </div>
     <div class="card">
       <div class="card-label">mic activity</div>
-      <div class="card-value" id="mic-val">--</div>
-      <div class="card-sub" id="mic-sub">ambient sound level</div>
+      <div id="mic-display">
+        <div class="card-value" id="mic-val">--</div>
+        <div class="card-sub" id="mic-sub">ambient sound level</div>
+      </div>
       <div id="mic-badge" class="badge badge-blue" style="margin-top:8px">quiet</div>
     </div>
   </div>
@@ -217,6 +217,57 @@
 </div>
 
 <script>
+  // ─── MIC CALIBRATION ──────────────────────────────────────────────────────
+  //
+  // The sensor outputs a binary 0 or 1 on each poll (~300ms interval).
+  // We count how many 1s arrive in a sliding time window, then normalise
+  // that count to a 0.0–1.0 volume score.
+  //
+  // WINDOW_MS      — how long the sliding window is in milliseconds.
+  //                  300ms poll × ~16 samples = ~5 seconds.
+  //                  Increase for a smoother/slower response, decrease for snappier.
+  //
+  // QUIET_THRESHOLD  — counts of 1s per window below this → "quiet"
+  // ACTIVE_THRESHOLD — counts of 1s per window above this → "loud"
+  //
+  // HOW TO CALIBRATE:
+  //   1. Open the browser console (F12 → Console).
+  //   2. Leave the room silent for 10s — note the logged "mic count" values → set QUIET_THRESHOLD just above that range.
+  //   3. Run a machine / make noise for 10s — note the counts → set ACTIVE_THRESHOLD just below that range.
+  //   4. Save and reload.
+
+  const MIC_WINDOW_MS      = 5000;   // sliding window duration (ms) — CALIBRATE if needed
+  const QUIET_THRESHOLD    = 3;      // counts below this = quiet      — CALIBRATE
+  const ACTIVE_THRESHOLD   = 12;     // counts above this = loud        — CALIBRATE
+
+  const micHistory = [];  // stores { value: 0|1, timestamp: ms }
+
+  function pushMicSample(raw) {
+    // raw is the binary value from /data (0 or 1)
+    const now = Date.now();
+    micHistory.push({ value: parseInt(raw), timestamp: now });
+
+    // evict samples older than the window
+    const cutoff = now - MIC_WINDOW_MS;
+    while (micHistory.length > 0 && micHistory[0].timestamp < cutoff) {
+      micHistory.shift();
+    }
+  }
+
+  function getMicVolume() {
+    // count 1s in the current window
+    const count = micHistory.reduce((sum, s) => sum + s.value, 0);
+    const maxPossible = MIC_WINDOW_MS / 300; // max samples in window at 300ms poll rate
+
+    // clamp count between thresholds, then normalise to 0.0–1.0
+    const clamped = Math.min(Math.max(count - QUIET_THRESHOLD, 0), ACTIVE_THRESHOLD - QUIET_THRESHOLD);
+    const normalised = parseFloat((clamped / (ACTIVE_THRESHOLD - QUIET_THRESHOLD)).toFixed(2));
+
+    console.log(`mic count in window: ${count} / ~${Math.round(maxPossible)} samples → volume: ${normalised}`);
+    return { count, normalised };
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
 const notifs = [];
 let prevLaundryState = null;
 
@@ -236,10 +287,10 @@ function accelMag(ax, ay, az) { return Math.sqrt(ax*ax + ay*ay + az*az); }
 
 function classifyLaundry(ax, ay, az) {
   const delta = Math.abs(accelMag(ax, ay, az) - 9.8);
-  if(delta < 0.3)  return {state:"still",    label:"laundry is still",      sub:"machine not running or cycle done"};
-  if(delta < 1.5)  return {state:"gentle",   label:"gentle spin",           sub:"early wash cycle"};
-  if(delta < 4.0)  return {state:"spinning", label:"machine running",       sub:"mid-cycle, all good"};
-  return               {state:"intense",  label:"heavy spin detected",   sub:"final spin — almost done!"};
+  if(delta < 0.3)  return {state:"still",    label:"laundry is still",    sub:"machine not running or cycle done"};
+  if(delta < 1.5)  return {state:"gentle",   label:"gentle spin",         sub:"early wash cycle"};
+  if(delta < 4.0)  return {state:"spinning", label:"machine running",     sub:"mid-cycle, all good"};
+  return                  {state:"intense",  label:"heavy spin detected", sub:"final spin — almost done!"};
 }
 
 function moldRisk(temp, hum) {
@@ -249,16 +300,31 @@ function moldRisk(temp, hum) {
   return                             {score:8,  label:"fresh air vibes",          badge:"badge-green", fill:"#639922"};
 }
 
-function availStatus(temp) {
-  if(temp > 35) return {label:"machines running — occupied", pct:85, badge:"badge-red",   barColor:"#E24B4A"};
-  if(temp > 28) return {label:"warming up / finishing",      pct:50, badge:"badge-amber", barColor:"#EF9F27"};
-  return               {label:"open — go for it!",           pct:15, badge:"badge-green", barColor:"#1D9E75"};
+function availStatus(volume, stat) {
+  
+  if (stat === 1) {
+    return {
+      label: "you spin me right round",
+      pct: 100,
+      badge: "baby, right round",
+      barColor: "#8E44AD"
+    };
+  }
+
+  if(volume > 0.8) return {label:"busy — try later", pct:85, badge:"badge-red", barColor:"#E24B4A"};
+  if(volume > 0.4) return {label:"moderate activity", pct:50, badge:"badge-amber", barColor:"#EF9F27"};
+  return {
+    label: "open — go for it!",
+    pct: 15,
+    badge: "badge-green",
+    barColor: "#1D9E75"
+  };
 }
 
-function micStatus(mic) {
-  if(mic > 700) return {label:"loud — machines running", badge:"badge-red"};
-  if(mic > 400) return {label:"active hum",              badge:"badge-amber"};
-  return               {label:"quiet",                   badge:"badge-blue"};
+function micStatus(volume) {
+  if(volume > 0.9) return {label:"loud — machines running", badge:"badge-red"};
+  if(volume > 0.4) return {label:"active hum",              badge:"badge-amber"};
+  return                  {label:"quiet",                   badge:"badge-blue"};
 }
 
 function tempStatus(temp) {
@@ -276,23 +342,73 @@ async function updateData() {
     const data = await fetch("/data").then(r => r.json());
     const temp = parseFloat(data.temp);
     const hum  = parseFloat(data.hum);
-    const mic  = parseFloat(data.mic);
     const ax   = parseFloat(data.ax);
     const ay   = parseFloat(data.ay);
     const az   = parseFloat(data.az);
+    const stat = parseInt(data.stat);
+
+    // push the raw binary mic value into the sliding window
+    pushMicSample(data.mic);
+    const { normalised: micVolume } = getMicVolume();
 
     setEl("temp-val", temp.toFixed(1) + " °C");
     setEl("hum-val",  hum.toFixed(0)  + " %");
-    setEl("mic-val",  Math.round(mic).toString());
-    setEl("ax-val",   ax.toFixed(1));
-    setEl("ay-val",   ay.toFixed(1));
-    setEl("az-val",   az.toFixed(1));
     setEl("last-update", "just now");
 
-    const toBar = v => Math.min(100, Math.max(0, ((v + 15) / 30) * 100));
-    document.getElementById("ax-bar").style.width = toBar(ax) + "%";
-    document.getElementById("ay-bar").style.width = toBar(ay) + "%";
-    document.getElementById("az-bar").style.width = toBar(az) + "%";
+    const stateBadge = document.getElementById("state-badge");
+
+    if(stat === 1) {
+      stateBadge.className = "badge badge-purple";
+      stateBadge.textContent = "sensor on machine";
+
+      document.getElementById("mic-display").innerHTML = `
+        <div class="bzz">bzzz....</div>
+        <div class="bzz-sub">machine is working</div>`;
+      setBadge("mic-badge", "badge-purple", "on machine");
+
+      const toBar = v => Math.min(100, Math.max(0, ((v + 15) / 30) * 100));
+      document.getElementById("ax-bar").style.width = toBar(ax) + "%";
+      document.getElementById("ay-bar").style.width = toBar(ay) + "%";
+      document.getElementById("az-bar").style.width = toBar(az) + "%";
+      setEl("ax-val", ax.toFixed(1));
+      setEl("ay-val", ay.toFixed(1));
+      setEl("az-val", az.toFixed(1));
+
+      const laundry = classifyLaundry(ax, ay, az);
+      setEl("laundry-status", laundry.label);
+      setEl("laundry-sub",    laundry.sub);
+
+      if(laundry.state !== prevLaundryState) {
+        if(laundry.state === "still" && prevLaundryState === "spinning")
+          addNotif("!", "#EAF3DE", "#27500A", "your laundry might be done — go check!");
+        else if(laundry.state === "intense")
+          addNotif("~", "#EEEDFE", "#534AB7", "heavy vibration detected — final spin?");
+        else if(laundry.state === "still" && prevLaundryState !== null)
+          addNotif("?", "#FAEEDA", "#633806", "machine stopped — door opened or cycle done");
+        prevLaundryState = laundry.state;
+      }
+
+    } else {
+      stateBadge.className = "badge badge-gray";
+      stateBadge.textContent = "sensor observing";
+
+      document.getElementById("mic-display").innerHTML = `
+        <div class="card-value" id="mic-val">${micVolume.toFixed(2)}</div>
+        <div class="card-sub" id="mic-sub">volume (0.0 – 1.0)</div>`;
+      const ms = micStatus(micVolume);
+      setBadge("mic-badge", ms.badge, ms.label);
+
+      document.getElementById("ax-bar").style.width = "50%";
+      document.getElementById("ay-bar").style.width = "50%";
+      document.getElementById("az-bar").style.width = "50%";
+      setEl("ax-val", "0");
+      setEl("ay-val", "0");
+      setEl("az-val", "0");
+
+      setEl("laundry-status", "waiting for your laundry");
+      setEl("laundry-sub", "attach sensor to machine to start tracking");
+      prevLaundryState = null;
+    }
 
     const mold = moldRisk(temp, hum);
     document.getElementById("mold-fill").style.width      = mold.score + "%";
@@ -300,31 +416,14 @@ async function updateData() {
     setEl("mold-score", mold.score + "%");
     setBadge("hum-badge", mold.badge, mold.label);
 
-    const avail = availStatus(temp);
+    const avail = availStatus(micVolume, stat);
     setEl("avail-status", avail.label);
     document.getElementById("avail-bar").style.width      = avail.pct + "%";
     document.getElementById("avail-bar").style.background = avail.barColor;
-    setBadge("avail-badge", avail.badge, avail.pct < 30 ? "open" : avail.pct < 70 ? "busy" : "occupied");
-
-    const ms = micStatus(mic);
-    setBadge("mic-badge", ms.badge, ms.label);
+    setBadge("avail-badge", avail.badge, avail.pct < 30 ? avail.openBadge : avail.pct < 70 ? "busy" : "occupied");
 
     const ts = tempStatus(temp);
     setBadge("temp-badge", ts.badge, ts.label);
-
-    const laundry = classifyLaundry(ax, ay, az);
-    setEl("laundry-status", laundry.label);
-    setEl("laundry-sub",    laundry.sub);
-
-    if(laundry.state !== prevLaundryState) {
-      if(laundry.state === "still" && prevLaundryState === "spinning")
-        addNotif("!", "#EAF3DE", "#27500A", "your laundry might be done — go check!");
-      else if(laundry.state === "intense")
-        addNotif("~", "#EEEDFE", "#534AB7", "heavy vibration detected — final spin?");
-      else if(laundry.state === "still" && prevLaundryState !== null)
-        addNotif("?", "#FAEEDA", "#633806", "machine stopped — door opened or cycle done");
-      prevLaundryState = laundry.state;
-    }
 
     if(mold.score >= 90)
       addNotif("!", "#FCEBEB", "#791F1F", "high humidity + heat — rush to collect your laundry!");
